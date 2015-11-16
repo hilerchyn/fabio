@@ -44,6 +44,14 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var h http.Handler
 	switch {
 	case r.Header.Get("Upgrade") == "websocket":
+		// to establish WS connections as an unfiltered TCP stream
+		// between the client and the server use
+		//
+		//     h = newRawProxy(t.URL)
+		//
+		// This may resolve compatilbility issues between the client
+		// and the server but it also increases the chance for malicious
+		// attacks since fabio no longer acts as a middleman.
 		h = newWSProxy(t.URL)
 	default:
 		h = newHTTPProxy(t.URL, p.tr)
