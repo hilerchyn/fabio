@@ -18,9 +18,13 @@ import (
 func Load() (cfg *Config, err error) {
 	var path string
 	for i, arg := range os.Args {
+
+		//如果查看版本，则直接返回
 		if arg == "-v" {
 			return nil, nil
 		}
+
+		//解析配置文件的路径
 		path, err = parseCfg(os.Args, i)
 		if err != nil {
 			return nil, err
@@ -29,15 +33,22 @@ func Load() (cfg *Config, err error) {
 			break
 		}
 	}
+
+	//从配置文件中加载配置信息，并获得 github.com/magiconair/properties 的 Properties 数据结构
 	p, err := loadProperties(path)
 	if err != nil {
 		return nil, err
 	}
+
+	//
 	return load(p)
 }
 
 var errInvalidConfig = errors.New("invalid or missing path to config file")
 
+/**
+  解析 -cfg 参数，并返回配置文件的路径
+ */
 func parseCfg(args []string, i int) (path string, err error) {
 	if len(args) == 0 || i >= len(args) || !strings.HasPrefix(args[i], "-cfg") {
 		return "", nil
@@ -69,19 +80,28 @@ func parseCfg(args []string, i int) (path string, err error) {
 	return path, nil
 }
 
+/**
+  从配置文件中加载配置信息，并返回符合github.com/magiconair/properties 的 Properties 数据结构
+ */
 func loadProperties(path string) (p *properties.Properties, err error) {
 	if path == "" {
 		return properties.NewProperties(), nil
 	}
+	//如果是网络上的配置信息那么，使用LoadURL加载
 	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
 		return properties.LoadURL(path)
 	}
 	return properties.LoadFile(path, properties.UTF8)
 }
 
+/**
+  加载配置信息到全局配置变量，并返回全局配置变量
+ */
 func load(p *properties.Properties) (cfg *Config, err error) {
+	//全局配置变量
 	cfg = &Config{}
 
+	//flags解析集合
 	f := NewFlagSet(os.Args[0], flag.ExitOnError)
 
 	// dummy values which were parsed earlier

@@ -33,6 +33,7 @@ import (
 var version = "1.3.4"
 
 func main() {
+	// 从配置文件中获取全局配置，并赋值给配置变量
 	cfg, err := config.Load()
 	if err != nil {
 		exit.Fatalf("[FATAL] %s. %s", version, err)
@@ -42,40 +43,59 @@ func main() {
 		return
 	}
 
+	// 打印启动信息
 	log.Printf("[INFO] Runtime config\n" + toJSON(cfg))
 	log.Printf("[INFO] Version %s starting", version)
 	log.Printf("[INFO] Go runtime is %s", runtime.Version())
 
+	// 加上程序退出监听goroutine
 	exit.Listen(func(s os.Signal) {
 		if registry.Default == nil {
 			return
 		}
+		// 从fabio移除服务注册信息
 		registry.Default.Deregister()
 	})
 
+	// 创建HTTP代理的句柄
 	httpProxy := newHTTPProxy(cfg)
+	// @todo 了解业务流程
 	tcpProxy := proxy.NewTCPSNIProxy(cfg.Proxy)
 
+	// 初始化运行时
 	initRuntime(cfg)
+	// @todo 了解业务流程
 	initMetrics(cfg)
+	// 初始化后端 @todo 了解业务流程
 	initBackend(cfg)
+	// 监听后端服务器 @todo 了解业务流程
 	go watchBackend()
+	// 启动管理界面 @todo 了解业务流程
 	startAdmin(cfg)
+	// 启动监听，开启服务器 @todo 了解业务流程
 	startListeners(cfg.Listen, cfg.Proxy.ShutdownWait, httpProxy, tcpProxy)
+
+	//等待退出
 	exit.Wait()
 }
 
+/**
+  使用配置信息创建并返回HTTP代理服务器的句柄
+ */
 func newHTTPProxy(cfg *config.Config) http.Handler {
+	// 设置路由拣选策略
 	if err := route.SetPickerStrategy(cfg.Proxy.Strategy); err != nil {
 		exit.Fatal("[FATAL] ", err)
 	}
 	log.Printf("[INFO] Using routing strategy %q", cfg.Proxy.Strategy)
 
+	// 设置路由匹配器
 	if err := route.SetMatcher(cfg.Proxy.Matcher); err != nil {
 		exit.Fatal("[FATAL] ", err)
 	}
 	log.Printf("[INFO] Using routing matching %q", cfg.Proxy.Matcher)
 
+	// 配置转换器
 	tr := &http.Transport{
 		ResponseHeaderTimeout: cfg.Proxy.ResponseHeaderTimeout,
 		MaxIdleConnsPerHost:   cfg.Proxy.MaxConn,
@@ -84,7 +104,19 @@ func newHTTPProxy(cfg *config.Config) http.Handler {
 			KeepAlive: cfg.Proxy.KeepAliveTimeout,
 		}).Dial,
 	}
+	/**
+	@todo 上面代码中有疑问，如下代码：
 
+	Dial: (&net.Dialer{
+		Timeout:   cfg.Proxy.DialTimeout,
+		KeepAlive: cfg.Proxy.KeepAliveTimeout,
+	}).Dial
+
+	第一行为何用 &net.Dialer ? 即为何使用引用？
+	原因是 net包的Dialer结构体(struct)的方法Dial是指针类型，所以只有使用引用定义的时候才能访问到该函数
+	 */
+
+	// 生成并返回HTTP代理句柄
 	return proxy.NewHTTPProxy(tr, cfg.Proxy)
 }
 
@@ -97,6 +129,9 @@ func startAdmin(cfg *config.Config) {
 	}()
 }
 
+/**
+ @todo Metrics 用来做什么？
+ */
 func initMetrics(cfg *config.Config) {
 	if cfg.Metrics.Target == "" {
 		log.Printf("[INFO] Metrics disabled")
@@ -112,6 +147,9 @@ func initMetrics(cfg *config.Config) {
 	}
 }
 
+/**
+  配置运行时信息
+ */
 func initRuntime(cfg *config.Config) {
 	if os.Getenv("GOGC") == "" {
 		log.Print("[INFO] Setting GOGC=", cfg.Runtime.GOGC)
