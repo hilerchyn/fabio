@@ -60,13 +60,18 @@ func main() {
 	// 创建HTTP代理的句柄
 	httpProxy := newHTTPProxy(cfg)
 	// @todo 了解业务流程
+	// SNI 即 Server Name Indication 是用来改善
+	// SSL(Secure Socket Layer)和TLS(Transport Layer Security)的一项特性。
+	// 它允许客户端在服务器端向其发送证书之前请求服务器的域名。这对于在虚拟主机模式使用TLS是必要的。
+	//
+	// 即提供 HTTPS 服务, 返回 tcpSNIProxy 结构体
 	tcpProxy := proxy.NewTCPSNIProxy(cfg.Proxy)
 
 	// 初始化运行时
 	initRuntime(cfg)
-	// @todo 了解业务流程
+	// 设置Metrics监控系统的配置信息，以及路由的服务注册信息
 	initMetrics(cfg)
-	// 初始化后端 @todo 了解业务流程
+	// 初始化注册服务的后端配置信息
 	initBackend(cfg)
 	// 监听后端服务器 @todo 了解业务流程
 	go watchBackend()
@@ -131,8 +136,11 @@ func startAdmin(cfg *config.Config) {
 
 /**
  @todo Metrics 用来做什么？
+ 系统监控
+ 使用 配置文件中的 Metrics 信息来设置，Metrics的默认注册表和路由器的服务注册表
  */
 func initMetrics(cfg *config.Config) {
+	// 如果度量服务器的Target 为空，那么表示Metrics功能被禁用
 	if cfg.Metrics.Target == "" {
 		log.Printf("[INFO] Metrics disabled")
 		return
@@ -151,6 +159,8 @@ func initMetrics(cfg *config.Config) {
   配置运行时信息
  */
 func initRuntime(cfg *config.Config) {
+
+	// GC 百分比，当内存占用达到总内存的百分比后触发GC
 	if os.Getenv("GOGC") == "" {
 		log.Print("[INFO] Setting GOGC=", cfg.Runtime.GOGC)
 		debug.SetGCPercent(cfg.Runtime.GOGC)
@@ -158,6 +168,7 @@ func initRuntime(cfg *config.Config) {
 		log.Print("[INFO] Using GOGC=", os.Getenv("GOGC"), " from env")
 	}
 
+	// 最大CPU使用数
 	if os.Getenv("GOMAXPROCS") == "" {
 		log.Print("[INFO] Setting GOMAXPROCS=", cfg.Runtime.GOMAXPROCS)
 		runtime.GOMAXPROCS(cfg.Runtime.GOMAXPROCS)
@@ -166,9 +177,12 @@ func initRuntime(cfg *config.Config) {
 	}
 }
 
+// 初始化后端服务器的配置信息
+// 初始后端注册服务的默认 registry.Default 配置信息
 func initBackend(cfg *config.Config) {
 	var err error
 
+	// 根据配置中的　Registry -> Backend 的数据(file | static | consul)来判断后端服务的类型，并生成相应的配置信息
 	switch cfg.Registry.Backend {
 	case "file":
 		registry.Default, err = file.NewBackend(cfg.Registry.File.Path)
