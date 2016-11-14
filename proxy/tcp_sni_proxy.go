@@ -38,9 +38,13 @@ type tcpSNIProxy struct {
 	cfg config.Proxy
 }
 
+/*
+ 处理进入的连接请求
+ */
 func (p *tcpSNIProxy) Serve(in net.Conn) {
 	defer in.Close()
 
+	// if is shutting down, then exit
 	if ShuttingDown() {
 		return
 	}
@@ -53,6 +57,7 @@ func (p *tcpSNIProxy) Serve(in net.Conn) {
 	}
 	data = data[:n]
 
+	// 获取客户端发来的 Server Name
 	serverName, ok := readServerName(data)
 	if !ok {
 		fmt.Fprintln(in, "handshake failed")
@@ -66,12 +71,14 @@ func (p *tcpSNIProxy) Serve(in net.Conn) {
 		return
 	}
 
+	// 根据Server Name 从路由表中查找路由信息
 	t := route.GetTable().LookupHost(serverName)
 	if t == nil {
 		log.Print("[WARN] tcp+sni: No route for ", serverName)
 		return
 	}
 
+	// 连接路由对应的真实服务器
 	out, err := net.DialTimeout("tcp", t.URL.Host, p.cfg.DialTimeout)
 	if err != nil {
 		log.Print("[WARN] tcp+sni: cannot connect to upstream ", t.URL.Host)

@@ -57,6 +57,30 @@ func main() {
 		registry.Default.Deregister()
 	})
 
+	// Proxy
+	/*
+	"Proxy": {
+		"Strategy": "rnd",
+		"Matcher": "prefix",
+		"NoRouteStatus": 404,
+		"MaxConn": 10000,
+		"ShutdownWait": 0,
+		"DialTimeout": 30000000000,
+		"ResponseHeaderTimeout": 0,
+		"KeepAliveTimeout": 0,
+		"ReadTimeout": 0,
+		"WriteTimeout": 0,
+		"FlushInterval": 1000000000,
+		"LocalIP": "192.168.3.101",
+		"ClientIPHeader": "",
+		"TLSHeader": "",
+		"TLSHeaderValue": "",
+		"GZIPContentTypesValue": "",
+		"GZIPContentTypes": null
+	    },
+
+	 */
+
 	// 创建HTTP代理的句柄
 	httpProxy := newHTTPProxy(cfg)
 	// @todo 了解业务流程
@@ -68,15 +92,96 @@ func main() {
 	tcpProxy := proxy.NewTCPSNIProxy(cfg.Proxy)
 
 	// 初始化运行时
+	/*
+	"Runtime": {
+		"GOGC": 800,
+		"GOMAXPROCS": 4
+	    },
+
+	 */
 	initRuntime(cfg)
 	// 设置Metrics监控系统的配置信息，以及路由的服务注册信息
+	/*
+	"Metrics": {
+		"Target": "",
+		"Prefix": "{{clean .Hostname}}.{{clean .Exec}}",
+		"Names": "{{clean .Service}}.{{clean .Host}}.{{clean .Path}}.{{clean .TargetURL.Host}}",
+		"Interval": 30000000000,
+		"GraphiteAddr": "",
+		"StatsDAddr": "",
+		"CirconusAPIKey": "",
+		"CirconusAPIApp": "fabio",
+		"CirconusAPIURL": "",
+		"CirconusCheckID": "",
+		"CirconusBrokerID": ""
+	    },
+	 */
 	initMetrics(cfg)
+	/*
+	 "Registry": {
+		"Backend": "consul",
+		"Static": {
+		    "Routes": ""
+		},
+		"File": {
+		    "Path": ""
+		},
+		"Consul": {
+		    "Addr": "localhost:8500",
+		    "Scheme": "http",
+		    "Token": "",
+		    "KVPath": "/fabio/config",
+		    "TagPrefix": "urlprefix-",
+		    "Register": true,
+		    "ServiceAddr": ":9998",
+		    "ServiceName": "fabio",
+		    "ServiceTags": null,
+		    "ServiceStatus": [
+			"passing"
+		    ],
+		    "CheckInterval": 1000000000,
+		    "CheckTimeout": 3000000000
+		}
+	    },
+
+	 */
 	// 初始化注册服务的后端配置信息
 	initBackend(cfg)
-	// 监听后端服务器 @todo 了解业务流程
+	// 启动后端监听服务器
 	go watchBackend()
-	// 启动管理界面 @todo 了解业务流程
+
+	/*
+	"UI": {
+		"Addr": ":9998",
+		"Color": "light-green",
+		"Title": ""
+	    },
+	 */
+	// 启动管理界面
 	startAdmin(cfg)
+
+	/*
+	"Listen": [
+        {
+            "Addr": ":9999",
+            "Proto": "http",
+            "ReadTimeout": 0,
+            "WriteTimeout": 0,
+            "CertSource": {
+                "Name": "",
+                "Type": "",
+                "CertPath": "",
+                "KeyPath": "",
+                "ClientCAPath": "",
+                "CAUpgradeCN": "",
+                "Refresh": 0,
+                "Header": null
+            },
+            "StrictMatch": false
+        }
+    ],
+
+	 */
 	// 启动监听，开启服务器 @todo 了解业务流程
 	startListeners(cfg.Listen, cfg.Proxy.ShutdownWait, httpProxy, tcpProxy)
 

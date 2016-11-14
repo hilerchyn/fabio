@@ -22,6 +22,28 @@ func init() {
 }
 
 // startListeners runs one or more listeners for the handler
+/*
+  listen = "Listen": [
+        {
+            "Addr": ":9999",
+            "Proto": "http",
+            "ReadTimeout": 0,
+            "WriteTimeout": 0,
+            "CertSource": {
+                "Name": "",
+                "Type": "",
+                "CertPath": "",
+                "KeyPath": "",
+                "ClientCAPath": "",
+                "CAUpgradeCN": "",
+                "Refresh": 0,
+                "Header": null
+            },
+            "StrictMatch": false
+        }
+    ],
+ 通过配置信息中的 Listen 来启动不同的监听服务，根据 上面的 Proto 来启动不懂的服务器， Proto 可用的参数有 http, https, tcp+sni
+ */
 func startListeners(listen []config.Listen, wait time.Duration, h http.Handler, tcph proxy.TCPProxy) {
 	for _, l := range listen {
 		switch l.Proto {
@@ -46,8 +68,21 @@ func startListeners(listen []config.Listen, wait time.Duration, h http.Handler, 
 	log.Print("[INFO] Down")
 }
 
+/*
+ 使用了第三方 github.com/armon/go-proxyproto 包
+ @todo 两次调用了 ln.Close() 为什么不会引发问题？
+ 	defer ln.Close()
+
+	// close the socket on exit to terminate the accept loop
+	go func() {
+		<-quit
+		ln.Close()
+	}()
+ */
 func listenAndServeTCP(l config.Listen, h proxy.TCPProxy) {
 	log.Print("[INFO] TCP+SNI proxy listening on ", l.Addr)
+
+	// 生成 Listener 结构体类型
 	ln, err := net.Listen("tcp", l.Addr)
 	if err != nil {
 		exit.Fatal("[FATAL] ", err)
@@ -62,6 +97,7 @@ func listenAndServeTCP(l config.Listen, h proxy.TCPProxy) {
 	}()
 
 	for {
+		// 接收连接请求
 		conn, err := ln.Accept()
 		if err != nil {
 			select {
@@ -71,6 +107,7 @@ func listenAndServeTCP(l config.Listen, h proxy.TCPProxy) {
 				exit.Fatal("[FATAL] ", err)
 			}
 		}
+		// 处理连接
 		go h.Serve(conn)
 	}
 }
