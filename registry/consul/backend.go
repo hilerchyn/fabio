@@ -75,6 +75,9 @@ func (b *be) WriteManual(value string, version uint64) (ok bool, err error) {
 	return putKV(b.c, b.cfg.KVPath, value, version)
 }
 
+/**
+ 启动监视服务器，并返回服务状态的channel
+ */
 func (b *be) WatchServices() chan string {
 	log.Printf("[INFO] consul: Using dynamic routes")
 	log.Printf("[INFO] consul: Using tag prefix %q", b.cfg.TagPrefix)
@@ -84,6 +87,9 @@ func (b *be) WatchServices() chan string {
 	return svc
 }
 
+/**
+ 监视服务手册
+ */
 func (b *be) WatchManual() chan string {
 	log.Printf("[INFO] consul: Watching KV path %q", b.cfg.KVPath)
 

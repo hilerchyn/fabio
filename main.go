@@ -125,6 +125,14 @@ func newHTTPProxy(cfg *config.Config) http.Handler {
 	return proxy.NewHTTPProxy(tr, cfg.Proxy)
 }
 
+/**
+ 启动管理UI服务,使用配置文件中的 UI配置信息
+ "UI": {
+        "Addr": ":9998",
+        "Color": "light-green",
+        "Title": ""
+    },
+ */
 func startAdmin(cfg *config.Config) {
 	log.Printf("[INFO] Admin server listening on %q", cfg.UI.Addr)
 	go func() {
@@ -178,7 +186,7 @@ func initRuntime(cfg *config.Config) {
 }
 
 // 初始化后端服务器的配置信息
-// 初始后端注册服务的默认 registry.Default 配置信息
+// 初始后端注册服务的默认 registry.Default 注册服务及配置信息
 func initBackend(cfg *config.Config) {
 	var err error
 
@@ -202,6 +210,9 @@ func initBackend(cfg *config.Config) {
 	}
 }
 
+/**
+  启动监测服务器的后端服务
+ */
 func watchBackend() {
 	var (
 		last   string
