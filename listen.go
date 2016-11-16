@@ -112,7 +112,32 @@ func listenAndServeTCP(l config.Listen, h proxy.TCPProxy) {
 	}
 }
 
+// 监听并伺服HTTP请求
+/*
+ 监听的配置信息如下：
+ "Listen": [
+        {
+            "Addr": ":9999",
+            "Proto": "http",
+            "ReadTimeout": 0,
+            "WriteTimeout": 0,
+            "CertSource": {
+                "Name": "",
+                "Type": "",
+                "CertPath": "",
+                "KeyPath": "",
+                "ClientCAPath": "",
+                "CAUpgradeCN": "",
+                "Refresh": 0,
+                "Header": null
+            },
+            "StrictMatch": false
+        }
+    ],
+
+ */
 func listenAndServeHTTP(l config.Listen, h http.Handler) {
+	// 初始化 http.Server
 	srv := &http.Server{
 		Handler:      h,
 		Addr:         l.Addr,
@@ -120,6 +145,7 @@ func listenAndServeHTTP(l config.Listen, h http.Handler) {
 		WriteTimeout: l.WriteTimeout,
 	}
 
+	// 如果协议为 https 那么需要获取证书信息
 	if l.Proto == "https" {
 		src, err := cert.NewSource(l.CertSource)
 		if err != nil {
